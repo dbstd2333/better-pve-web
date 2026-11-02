@@ -1,0 +1,43 @@
+        # better-pve:begin
+        eval {
+            my $bpve_out = `timeout 2 sensors -j 2>/dev/null`;
+            $res->{bpve_sensors} = (defined($bpve_out) && length($bpve_out)) ? $bpve_out : '';
+
+            my %bpve_netdev;
+            if (open(my $bpve_net_fh, '<', '/proc/net/dev')) {
+                while (my $bpve_line = <$bpve_net_fh>) {
+                    next unless $bpve_line =~ /^\s*([^:\s]+):\s*(.*)$/;
+                    my ($bpve_if, $bpve_rest) = ($1, $2);
+                    next unless -e "/sys/class/net/$bpve_if/device";
+                    my @bpve_f = split(' ', $bpve_rest);
+                    next if scalar(@bpve_f) < 9;
+                    $bpve_netdev{$bpve_if} = {
+                        rx => $bpve_f[0] + 0,
+                        tx => $bpve_f[8] + 0,
+                    };
+                }
+                close($bpve_net_fh);
+            }
+            $res->{bpve_netdev} = \%bpve_netdev;
+
+            my %bpve_disk;
+            if (open(my $bpve_disk_fh, '<', '/proc/diskstats')) {
+                while (my $bpve_line = <$bpve_disk_fh>) {
+                    my @bpve_f = split(' ', $bpve_line);
+                    next if scalar(@bpve_f) < 10;
+                    my $bpve_dev = $bpve_f[2];
+                    # 只统计真实块设备（含 /sys/block/<dev>/device），排除虚拟设备与分区
+                    next if $bpve_dev =~ /^(?:loop|dm-|zd|ram|fd)/;
+                    next unless -e "/sys/block/$bpve_dev/device";
+                    $bpve_disk{$bpve_dev} = {
+                        read => $bpve_f[5] * 512,
+                        write => $bpve_f[9] * 512,
+                    };
+                }
+                close($bpve_disk_fh);
+            }
+            $res->{bpve_diskstats} = \%bpve_disk;
+
+            $res->{bpve_ts} = time();
+        };
+        # better-pve:end

@@ -1,0 +1,287 @@
+/* ---------- shared bits ---------- */
+.bp-muted {
+    color: var(--bp-text-faint);
+}
+
+.bp-bar {
+    display: inline-block;
+    position: relative;
+    width: 60px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bp-raised);
+    overflow: hidden;
+    vertical-align: middle;
+}
+.bp-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+.bp-lv-ok .bp-bar-fill {
+    background: var(--bp-ok);
+}
+.bp-lv-warn .bp-bar-fill {
+    background: var(--bp-warn);
+}
+.bp-lv-crit .bp-bar-fill {
+    background: var(--bp-crit);
+}
+
+/* ---------- cards ---------- */
+.bp-card > .x-panel-header,
+.bp-card > .x-panel-bodyWrap > .x-panel-body,
+.bp-card > .x-panel-body {
+    box-shadow: 0 0 0 1px var(--bp-border);
+}
+.bp-card > .x-panel-header {
+    border-radius: var(--bp-radius-lg) var(--bp-radius-lg) 0 0;
+    border-bottom-color: var(--bp-border) !important;
+    background-color: var(--bp-panel);
+}
+.bp-card > .x-panel-bodyWrap > .x-panel-body,
+.bp-card > .x-panel-body {
+    border-radius: 0 0 var(--bp-radius-lg) var(--bp-radius-lg);
+    border-color: transparent;
+}
+/* body-only cards (no header) get full rounding */
+.bp-card.x-panel:not(:has(> .x-panel-header)) > .x-panel-bodyWrap > .x-panel-body {
+    border-radius: var(--bp-radius-lg);
+}
+.bp-cards > .x-autocontainer-outerCt,
+.bp-cards > .x-panel-bodyWrap > .x-panel-body {
+    background-color: var(--bp-bg);
+}
+.bp-cards .x-panel-body-default {
+    background-color: var(--bp-panel);
+}
+.bp-dc > .x-panel-bodyWrap > .x-panel-body,
+.bp-dc.x-panel > .x-panel-bodyWrap > .x-panel-body-default {
+    background-color: var(--bp-bg);
+}
+/* summary/panels backgrounds behind cards */
+.bp-cards {
+    background-color: var(--bp-bg);
+}
+
+/* info widgets inside status cards */
+.bp-enabled .x-panel-body .pmx-InfoWidget-title,
+.bp-enabled .pmx-info-widget-title {
+    color: var(--bp-text-muted);
+}
+
+/* ---------- node / guest status rows ---------- */
+.bp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 6px 2px 0;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 18px;
+}
+.bp-chip-label {
+    font-weight: 500;
+    opacity: 0.75;
+}
+.bp-chip.bp-lv-ok {
+    color: var(--bp-ok);
+    background: var(--bp-ok-soft);
+}
+.bp-chip.bp-lv-warn {
+    color: var(--bp-warn);
+    background: var(--bp-warn-soft);
+}
+.bp-chip.bp-lv-crit {
+    color: var(--bp-crit);
+    background: var(--bp-crit-soft);
+}
+
+.bp-rate {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.bp-rate-dir {
+    display: inline-block;
+    min-width: 12px;
+    margin-right: 4px;
+    color: var(--bp-text-faint);
+    font-weight: 600;
+}
+.bp-rate-sep {
+    display: inline-block;
+    width: 14px;
+}
+.bp-rate-gap {
+    display: inline-block;
+    width: 22px;
+}
+.bp-rate-note {
+    margin-left: 8px;
+    color: var(--bp-text-faint);
+    font-size: 11px;
+}
+
+/* ---------- resource tree mini bars ---------- */
+/* pinned to the right edge so long names truncate before the bars */
+.x-grid-cell-inner-treecolumn:has(.bp-tree-metrics) {
+    position: relative;
+    padding-right: 46px;
+}
+.bp-tree-metrics {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    position: absolute;
+    right: 6px;
+    top: 0;
+    bottom: 0;
+}
+.bp-tree-metrics-off .x-grid-cell-inner-treecolumn:has(.bp-tree-metrics) {
+    padding-right: 10px;
+}
+.bp-bar-mini {
+    width: 34px;
+    height: 3px;
+    border-radius: 2px;
+}
+.bp-bar-mini .bp-bar-fill {
+    border-radius: 2px;
+}
+.bp-tree-metrics-off .bp-tree-metrics {
+    display: none;
+}
+
+/* ---------- grid cell bars ---------- */
+.bp-cell-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-variant-numeric: tabular-nums;
+}
+.bp-cell-bar .bp-bar {
+    flex: 0 0 48px;
+    width: 48px;
+}
+.bp-cell-bar-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- datacenter dashboard ---------- */
+.bp-dash {
+    padding: 0 0 4px;
+    color: var(--bp-text);
+}
+.bp-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+}
+.bp-kpi {
+    background: var(--bp-panel);
+    border-radius: var(--bp-radius-lg);
+    box-shadow: 0 0 0 1px var(--bp-border);
+    padding: 14px 16px 12px;
+    min-width: 0;
+}
+.bp-kpi-head {
+    color: var(--bp-text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.bp-kpi-head .fa {
+    color: var(--bp-accent);
+}
+.bp-kpi-value {
+    margin-top: 6px;
+    font-size: 26px;
+    line-height: 30px;
+    font-weight: 650;
+    color: var(--bp-text-strong);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+.bp-kpi-of {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--bp-text-faint);
+    margin-left: 2px;
+}
+.bp-kpi-bar {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+}
+.bp-kpi-sub {
+    margin-top: 6px;
+    color: var(--bp-text-faint);
+    font-size: 11.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bp-tops {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+.bp-top {
+    background: var(--bp-panel);
+    border-radius: var(--bp-radius-lg);
+    box-shadow: 0 0 0 1px var(--bp-border);
+    padding: 12px 8px 8px;
+}
+.bp-top-title {
+    padding: 0 8px 8px;
+    font-weight: 600;
+    color: var(--bp-text-strong);
+}
+.bp-top-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.bp-top-row:hover {
+    background: var(--bp-hover);
+}
+.bp-top-row .fa {
+    color: var(--bp-text-muted);
+}
+.bp-top-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bp-top-id {
+    margin-left: 8px;
+    color: var(--bp-text-faint);
+    font-size: 11px;
+}
+.bp-top-bar {
+    flex: 0 0 90px;
+    width: 90px;
+}
+.bp-top-val {
+    flex: 0 0 72px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--bp-text-muted);
+}
+.bp-top-empty {
+    padding: 6px 8px;
+}

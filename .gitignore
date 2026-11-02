@@ -1,0 +1,4 @@
+dev/assets/
+dev/.cache/
+dist/
+.DS_Store

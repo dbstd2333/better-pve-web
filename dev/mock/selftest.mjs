@@ -182,7 +182,7 @@ try {
     assert.ok(Object.hasOwn(storageRrd[0], 'used'));
 
     const tasks = await getJson('/api2/json/cluster/tasks');
-    assert.equal(tasks.length, 5);
+    assert.equal(tasks.length, 6);
     assert.ok(tasks.some((task) => String(task.status).includes('command failed')));
 
     const journal = await getJson('/api2/extjs/nodes/pve1/journal', { extjs: true });

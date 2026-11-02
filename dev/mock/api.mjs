@@ -820,6 +820,8 @@ function handleGet(pathname, searchParams, segments, nowMs) {
             'next-id': String(MAX_ID + 1),
             notify: 'target=default-matcher',
             'registered-tags': ['prod', 'web', 'db', 'k8s', 'lab', 'template'],
+            // computed by the real API: registered tags plus all tags in use
+            'allowed-tags': ['db', 'k8s', 'lab', 'prod', 'template', 'web'],
             'user-tag-access': { 'user-allow': 'free' },
             location: '',
         };
@@ -1255,9 +1257,33 @@ function buildMockUpid(pathname) {
     return `UPID:pve1:${now}:${now}:${now}:${type}:100:root@pam:`;
 }
 
+const EXTRA_GET_ROUTES = [
+    [/^\/cluster\/sdn\/fabrics\/all$/, () => ({ fabrics: [], nodes: [] })],
+    [/^\/cluster\/config\/join$/, () => ({ config_digest: 'mock', nodelist: [], preferred_node: 'pve1', totem: {} })],
+    [
+        /^\/nodes\/([^/]+)\/hosts$/,
+        (m) => ({
+            digest: 'mock-hosts',
+            data: `127.0.0.1 localhost.localdomain localhost\n10.0.10.11 ${m[1]}.example.lan ${m[1]}\n`,
+        }),
+    ],
+    [
+        /^\/nodes\/[^/]+\/firewall\/options$/,
+        () => ({ enable: 1, log_level_in: 'nolog', log_level_out: 'nolog', nftables: 0, digest: 'mock' }),
+    ],
+    [/^\/(?:nodes\/[^/]+\/(?:qemu|lxc)\/\d+|cluster)\/firewall\/options$/, () => ({ enable: 0, digest: 'mock' })],
+    [/^\/nodes\/[^/]+\/ceph\/(?:cfg\/raw|crush)$/, () => ''],
+    [/^\/nodes\/[^/]+\/ceph\/cfg\/db$/, () => []],
+];
+
 // Route a single Proxmox API request and return the unwrapped `data` payload.
 export function handleMockApi(method, pathname, searchParams) {
-    const normalizedPath = pathname.replace(/\/+$/, '') || '/';
+    // some panels request "//cluster/..." or the "localhost" node alias
+    const normalizedPath =
+        pathname
+            .replace(/\/{2,}/g, '/')
+            .replace(/^\/nodes\/localhost(?=\/|$)/, '/nodes/pve1')
+            .replace(/\/+$/, '') || '/';
     const segments = normalizedPath.split('/').filter(Boolean).map((part) => decodeURIComponent(part));
     const nowMs = Date.now();
 
@@ -1271,6 +1297,14 @@ export function handleMockApi(method, pathname, searchParams) {
     const result = handleGet(normalizedPath, searchParams, segments, nowMs);
     if (result !== undefined) {
         return result;
+    }
+
+    // endpoints whose consumers break on the generic [] fallback
+    for (const [pattern, build] of EXTRA_GET_ROUTES) {
+        const m = pattern.exec(normalizedPath);
+        if (m) {
+            return build(m);
+        }
     }
 
     if (!unhandledGetPaths.has(normalizedPath)) {

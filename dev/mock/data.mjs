@@ -534,10 +534,19 @@ export const MOCK_CAPS = {
 export function createTasks(nowSeconds) {
     return [
         {
+            // running task: has pid, no endtime/status
+            upid: 'UPID:pve2:000F4250:000F4251:000F4252:qmigrate:103:root@pam:',
+            node: 'pve2',
+            pid: 1000016,
+            pstart: 1000017,
+            starttime: nowSeconds - 40,
+            type: 'qmigrate',
+            id: '103',
+            user: 'root@pam',
+        },
+        {
             upid: 'UPID:pve1:000F4240:000F4241:000F4242:qmstart:100:root@pam:',
             node: 'pve1',
-            pid: 1000000,
-            pstart: 1000001,
             starttime: nowSeconds - 18 * 60,
             endtime: nowSeconds - 18 * 60 + 8,
             type: 'qmstart',
@@ -548,8 +557,6 @@ export function createTasks(nowSeconds) {
         {
             upid: 'UPID:pve1:000F4243:000F4244:000F4245:vzdump:101:root@pam:',
             node: 'pve1',
-            pid: 1000003,
-            pstart: 1000004,
             starttime: nowSeconds - 2 * 3600,
             endtime: nowSeconds - 2 * 3600 + 614,
             type: 'vzdump',
@@ -560,8 +567,6 @@ export function createTasks(nowSeconds) {
         {
             upid: 'UPID:pve2:000F4246:000F4247:000F4248:aptupdate:103:root@pam:',
             node: 'pve2',
-            pid: 1000006,
-            pstart: 1000007,
             starttime: nowSeconds - 5 * 3600,
             endtime: nowSeconds - 5 * 3600 + 12,
             type: 'aptupdate',
@@ -572,8 +577,6 @@ export function createTasks(nowSeconds) {
         {
             upid: 'UPID:pve1:000F4249:000F424A:000F424B:vzsnapshot:200:admin@pve:',
             node: 'pve1',
-            pid: 1000009,
-            pstart: 1000010,
             starttime: nowSeconds - 22 * 3600,
             endtime: nowSeconds - 22 * 3600 + 5,
             type: 'vzsnapshot',
@@ -584,8 +587,6 @@ export function createTasks(nowSeconds) {
         {
             upid: 'UPID:pve1:000F424C:000F424D:000F424E:pvesr:201:root@pam:',
             node: 'pve1',
-            pid: 1000012,
-            pstart: 1000013,
             starttime: nowSeconds - 27 * 3600,
             endtime: nowSeconds - 27 * 3600 + 42,
             type: 'pvesr',

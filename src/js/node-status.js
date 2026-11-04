@@ -212,11 +212,16 @@ BP.feature('node-status', ['PVE.node.StatusView'], function () {
             } else {
                 items.push(netRow, diskRow);
             }
-            var cpus = indexOf('cpus');
-            items.splice(cpus >= 0 ? cpus + 1 : items.length, 0, tempRow);
+            // PVE-Tools 的温度补丁（pvemanagerlib.js 中的 itemId 'thermal'）已经显示温度时，
+            // 不再加我们自己的温度行，避免同一面板出现两份温度
+            var hasForeignTemps = indexOf('thermal') >= 0;
+            if (!hasForeignTemps) {
+                var cpus = indexOf('cpus');
+                items.splice(cpus >= 0 ? cpus + 1 : items.length, 0, tempRow);
+            }
 
             me.items = items;
-            me.height = (me.height || 350) + 70;
+            me.height = (me.height || 350) + (hasForeignTemps ? 50 : 70);
 
             me.callParent(arguments);
         },

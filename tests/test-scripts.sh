@@ -73,8 +73,8 @@ check_installed() {
 
     assert_eq "$(count_marker "$NODES" '# better-pve:begin')" "1" "Nodes.pm begin 标记数量"
     assert_eq "$(count_marker "$NODES" '# better-pve:end')" "1" "Nodes.pm end 标记数量"
-    grep -A1 -E '^[[:space:]]*\$res->\{pveversion\}[[:space:]]*=' "$NODES" \
-        | grep -qF '# better-pve:begin' || fail "片段未紧跟在 pveversion 行之后"
+    grep -B1 -E '^[[:space:]]*\$res->\{pveversion\}[[:space:]]*=' "$NODES" \
+        | grep -qF '# better-pve:end' || fail "片段未紧贴在 pveversion 行之前"
 
     assert_file "$CSS"
     assert_file "$JS"
@@ -160,7 +160,68 @@ assert_absent "$TPL.bpve-bak"
 cmp -s "$NODES" "$ORIG_NODES" || fail "场景 6 Nodes.pm 未还原"
 ok "升级覆盖场景不破坏新模板"
 
-echo "== 7. 脚本语法检查 =="
+# 模拟 PVE-Tools 温度补丁的写法：在 version_text 所在行的「下一行」之后插入代码（无结束标记）
+apply_pvetools_patch() {
+    local ln pt
+    pt="$TMP/pvetools-patch.txt"
+    printf '\n#modbyshowtempfreq\n\n        $res->{thermalstate} = `sensors -A`;\n        $res->{cpuFreq} = `cat /proc/cpuinfo`;\n' > "$pt"
+    ln=$(( $(sed -n -e '/PVE::pvecfg::version_text/=' "$NODES") + 1 ))
+    sed "${ln}r $pt" "$NODES" > "$NODES.pt" && mv "$NODES.pt" "$NODES"
+}
+
+echo "== 7. 先装 better-pve 再装 PVE-Tools 温度补丁 =="
+setup_root
+PVE_ROOT="$R" ./install.sh --with-backend >"$TMP/install4.log" 2>&1 \
+    || { cat "$TMP/install4.log"; fail "场景 7 安装失败"; }
+apply_pvetools_patch
+cp "$NODES" "$TMP/expect-pt.pm"
+perl -0777 -ne 'exit(/better-pve:begin.*modbyshowtempfreq.*better-pve:end/s ? 1 : 0)' "$NODES" \
+    || fail "PVE-Tools 代码落进了 better-pve 标记块"
+PVE_ROOT="$R" ./install.sh --with-backend >"$TMP/install5.log" 2>&1 \
+    || { cat "$TMP/install5.log"; fail "场景 7 重装失败"; }
+cmp -s "$NODES" "$TMP/expect-pt.pm" || fail "重装改动了 PVE-Tools 补丁"
+PVE_ROOT="$R" ./install.sh --reapply >"$TMP/reapply2.log" 2>&1 \
+    || { cat "$TMP/reapply2.log"; fail "场景 7 reapply 失败"; }
+cmp -s "$NODES" "$TMP/expect-pt.pm" || fail "reapply 改动了 PVE-Tools 补丁"
+PVE_ROOT="$R" ./uninstall.sh >"$TMP/uninstall3.log" 2>&1 \
+    || { cat "$TMP/uninstall3.log"; fail "场景 7 卸载失败"; }
+assert_eq "$(count_marker "$NODES" 'better-pve')" "0" "场景 7 卸载后 better-pve 残留"
+assert_eq "$(count_marker "$NODES" 'modbyshowtempfreq')" "1" "场景 7 卸载后 PVE-Tools 补丁"
+cp "$ORIG_NODES" "$NODES"; apply_pvetools_patch
+cp "$NODES" "$TMP/pt-only.pm"
+PVE_ROOT="$R" ./install.sh --with-backend >/dev/null 2>&1; PVE_ROOT="$R" ./uninstall.sh >/dev/null 2>&1
+cmp -s "$NODES" "$TMP/pt-only.pm" || fail "场景 7 卸载后与「仅 PVE-Tools」状态不一致"
+ok "先装 better-pve 后装 PVE-Tools：重装 / reapply / 卸载都保留 PVE-Tools 补丁"
+
+echo "== 8. 先装 PVE-Tools 温度补丁再装 better-pve =="
+setup_root
+apply_pvetools_patch
+cp "$NODES" "$TMP/pt-first.pm"
+PVE_ROOT="$R" ./install.sh --with-backend >"$TMP/install6.log" 2>&1 \
+    || { cat "$TMP/install6.log"; fail "场景 8 安装失败"; }
+grep -q 'PVE-Tools' "$TMP/install6.log" || fail "场景 8 未提示检测到 PVE-Tools"
+assert_eq "$(count_marker "$NODES" 'modbyshowtempfreq')" "1" "场景 8 安装后 PVE-Tools 补丁"
+PVE_ROOT="$R" ./uninstall.sh >"$TMP/uninstall4.log" 2>&1 \
+    || { cat "$TMP/uninstall4.log"; fail "场景 8 卸载失败"; }
+cmp -s "$NODES" "$TMP/pt-first.pm" || fail "场景 8 卸载后未回到「仅 PVE-Tools」状态"
+ok "先装 PVE-Tools 后装 better-pve：卸载后 PVE-Tools 补丁完好"
+
+echo "== 9. 旧版布局（片段在 pveversion 之后且 PVE-Tools 代码落进标记块）=="
+setup_root
+{
+    perl -ne 'print; if (/^\s*\$res->\{pveversion\}\s*=/) { open(my $f, "<", "backend/bpve-status.pl.snippet") or die; print <$f>; }' "$ORIG_NODES"
+} > "$NODES"
+apply_pvetools_patch
+perl -0777 -ne 'exit(/better-pve:begin.*modbyshowtempfreq.*better-pve:end/s ? 0 : 1)' "$NODES" \
+    || fail "场景 9 未构造出旧版问题布局"
+PVE_ROOT="$R" ./uninstall.sh >"$TMP/uninstall5.log" 2>&1 \
+    || { cat "$TMP/uninstall5.log"; fail "场景 9 卸载失败"; }
+assert_eq "$(count_marker "$NODES" 'better-pve')" "0" "场景 9 卸载后 better-pve 残留"
+assert_eq "$(count_marker "$NODES" 'modbyshowtempfreq')" "1" "场景 9 PVE-Tools 补丁被误删"
+grep -qF '$res->{thermalstate}' "$NODES" || fail "场景 9 PVE-Tools 代码被误删"
+ok "旧版布局卸载时救回落进标记块的 PVE-Tools 代码"
+
+echo "== 10. 脚本语法检查 =="
 for script in install.sh uninstall.sh tests/test-scripts.sh; do
     bash -n "$script" || fail "bash -n 失败: $script"
 done

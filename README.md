@@ -44,7 +44,7 @@ cd /root/better-pve-web && ./install.sh --with-backend
 |---|---|
 | `/usr/share/pve-manager/index.html.tpl` | 在 `</head>` 前插入 `<!-- better-pve:begin/end -->` 标记段；原文件备份为 `.bpve-bak` |
 | `/usr/share/pve-manager/{css,js}/better-pve.*` | 新增的样式和脚本 |
-| `/usr/share/perl5/PVE/API2/Nodes.pm` | 仅在使用 `--with-backend` 时，插入 `# better-pve:begin/end` 片段；原文件备份为 `.bpve-bak` |
+| `/usr/share/perl5/PVE/API2/Nodes.pm` | 仅在使用 `--with-backend` 时，在 `$res->{pveversion}` 行之前插入 `# better-pve:begin/end` 片段；原文件备份为 `.bpve-bak` |
 | `/opt/better-pve/` | 安装副本和配置，供升级后重新应用 |
 | `/etc/apt/apt.conf.d/99better-pve` | apt 钩子：每次 apt 操作后检查，如果注入被覆盖就重新应用，没被覆盖则什么都不做 |
 
@@ -54,7 +54,28 @@ cd /root/better-pve-web && ./install.sh --with-backend
 /opt/better-pve/uninstall.sh
 ```
 
-卸载会还原模板和 Nodes.pm，并删除所有新增文件和 apt 钩子。如果 PVE 已经升级、覆盖了这些文件，卸载不会用旧备份去覆盖新文件。
+卸载只移除 better-pve 自己的标记段，并删除所有新增文件和 apt 钩子；安装后其他工具对模板或 Nodes.pm 的修改会保留。如果 PVE 已经升级、覆盖了这些文件，卸载什么也不改。
+
+## 与 PVE-Tools 一起使用
+
+[PVE-Tools](https://github.com/PVE-Tools/PVE-Tools-9) 是菜单式的 PVE 运维工具箱，和本项目互补，可以同时安装，安装顺序不限：
+
+- **温度监控**：PVE-Tools 的“温度监控管理”同样会修改 Nodes.pm。better-pve 的后端片段插在 `pveversion` 行**之前**，PVE-Tools 插在其后，互不覆盖；重装、apt 自动重新注入和卸载都不会动到 PVE-Tools 的补丁（`tests/test-scripts.sh` 场景 7–9 覆盖）。
+- **温度不重复显示**：节点面板里已经有 PVE-Tools 的温度行时，better-pve 不再添加自己的温度行，网速和磁盘 IO 行照常显示。
+- **去订阅弹窗**：两者都能去掉弹窗，可以共存。PVE-Tools 的“恢复官方文件”会重装 pve-manager，better-pve 的 apt 钩子会自动重新注入。
+
+### 作为 PVE-Tools 插件安装
+
+[`integrations/pve-tools/better-pve.sh`](integrations/pve-tools/better-pve.sh) 是给 PVE-Tools 第三方软件市场（`Modules/`）用的插件：下载本仓库源码，按选择执行“仅前端安装 / 含后端补丁安装 / 卸载”。
+
+- 市场用 `sh`（dash）执行插件，所以这个脚本只用 POSIX sh 语法；修改后请用 `dash -n` 检查。
+- 第 2–5 行的 `## name/author/version/github` 是市场识别插件用的元信息，发版时同步更新 `version`。
+- 默认安装 `main` 分支；可用 `BPVE_REF=<tag>` 固定到某个版本。
+- 合入 PVE-Tools 后，用户在 PVE-Tools 主菜单 → 第三方工具 → 第三方软件市场里即可找到。在此之前也能直接运行：
+
+```bash
+sh <(curl -fsSL https://raw.githubusercontent.com/dbstd2333/better-pve-web/main/integrations/pve-tools/better-pve.sh)
+```
 
 ## 本地开发（macOS / Linux，不需要 PVE）
 
@@ -84,6 +105,7 @@ backend/             Nodes.pm 补丁片段
 build.sh             生成 dist/better-pve.{css,js}
 install.sh / uninstall.sh
 tests/test-scripts.sh  在模拟的 PVE 目录结构上测试安装和卸载（bash tests/test-scripts.sh）
+integrations/pve-tools/  PVE-Tools 第三方软件市场插件
 dev/                 本地预览：资源下载脚本 + mock 服务
 ```
 

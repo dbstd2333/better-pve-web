@@ -40,6 +40,12 @@ say() { [ "$QUIET" = 1 ] || echo "[better-pve] $*"; }
 warn() { echo "[better-pve] 警告: $*" >&2; }
 die() { echo "[better-pve] 错误: $*" >&2; exit 1; }
 
+# 从 Nodes.pm 中移除 better-pve 片段。旧版本把片段插在 pveversion 之后，PVE-Tools 等脚本
+# 在其后追加的代码会落在 begin 行与 eval 行之间；这部分不属于我们，原样保留在原位置。
+strip_nodes_block() {
+    perl -0777 -pe 's/^[ \t]*#[ \t]*better-pve:begin[^\n]*\n((?:(?!^[ \t]*#[ \t]*better-pve:end).)*?)^[ \t]*eval \{[ \t]*\n.*?^[ \t]*#[ \t]*better-pve:end[^\n]*\n?/$1/msg; s/^[ \t]*#[ \t]*better-pve:begin[^\n]*\n.*?^[ \t]*#[ \t]*better-pve:end[^\n]*\n?//msg' "$1"
+}
+
 if [ "$DRY" = 0 ]; then
     [ "$(id -u)" = "0" ] || die "请以 root 身份运行"
     command -v pveversion >/dev/null 2>&1 || die "未找到 pveversion，这不是 PVE 系统"
@@ -115,13 +121,19 @@ if [ "$BACKEND" = 1 ]; then
     grep -Eq '^[[:space:]]*\$res->\{pveversion\}[[:space:]]*=' "$NODES" \
         || die "Nodes.pm 中找不到 pveversion 锚点，未做修改"
 
+    # 片段插在 pveversion 行之前而不是之后：PVE-Tools 等脚本会在 pveversion 的下一行
+    # 之后追加代码，若我们占了那一行，它们的代码会落进我们的标记块，重装/卸载时被一并删除
+    if grep -qF 'modbyshowtempfreq' "$NODES"; then
+        say "检测到 PVE-Tools 温度监控补丁，将与其共存；界面中的温度行由 PVE-Tools 提供"
+    fi
+
     if [ ! -f "$NODES.bpve-bak" ] || ! grep -qF '# better-pve:begin' "$NODES"; then
         cp -p "$NODES" "$NODES.bpve-bak"
     fi
 
     tmp="$(mktemp "${NODES}.bpve.XXXXXX")" || die "无法创建临时文件"
-    perl -0777 -pe 's/^[ \t]*#[ \t]*better-pve:begin[^\n]*\n.*?^[ \t]*#[ \t]*better-pve:end[^\n]*\n?//msg' "$NODES" \
-        | BPVE_SNIPPET="$(cat "$SNIPPET")" perl -ne 'if (!$done && /^\s*\$res->\{pveversion\}\s*=/) { print; print $ENV{BPVE_SNIPPET}, "\n"; $done = 1; next } print' > "$tmp"
+    strip_nodes_block "$NODES" \
+        | BPVE_SNIPPET="$(cat "$SNIPPET")" perl -ne 'if (!$done && /^\s*\$res->\{pveversion\}\s*=/) { print $ENV{BPVE_SNIPPET}, "\n"; print; $done = 1; next } print' > "$tmp"
     chmod 644 "$tmp"
     mv "$tmp" "$NODES"
     CHANGED_NODES=1
